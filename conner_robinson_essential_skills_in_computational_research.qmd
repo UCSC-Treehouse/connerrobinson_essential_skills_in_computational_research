@@ -1,0 +1,11 @@
+---
+title: "conner_robinson_essential_skills_in_computational_research"
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+```{r}
+1 + 1
+```
