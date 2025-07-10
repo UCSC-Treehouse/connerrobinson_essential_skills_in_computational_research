@@ -1,0 +1,225 @@
+# Chapter_9
+
+
+# Prerequisites
+
+library(tidyverse) \# Left ggplot(mpg, aes(x = displ, y = hwy, color =
+class)) + geom_point()
+
+# Right
+
+ggplot(mpg, aes(x = displ, y = hwy, shape = class)) + geom_point() \#
+Left ggplot(mpg, aes(x = displ, y = hwy, size = class)) + geom_point()
+
+# Right
+
+ggplot(mpg, aes(x = displ, y = hwy, alpha = class)) + geom_point()
+
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_point(color = “blue”)
+
+# Exercises pt 1 of 6
+
+# Number 1
+
+ggplot(mpg, aes( y = hwy, x = displ)) + geom_point(color = “pink”, shape
+= “triangle”)
+
+# Number 2
+
+\#The color label was included in the aesthetic function
+
+# Number 4
+
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_point(aes(color = displ \<
+5))
+
+# Geometric Objects
+
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_smooth() ggplot(mpg, aes(x =
+displ, y = hwy, shape = drv)) + geom_smooth() ggplot(mpg, aes(x = displ,
+y = hwy, linetype = drv)) + geom_smooth() `geom_smooth()` using method =
+‘loess’ and formula = ‘y ~ x’ ggplot(mpg, aes(x = displ, y = hwy, color
+= drv)) + geom_point() + geom_smooth(aes(linetype = drv))
+
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_smooth()
+
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_smooth(aes(group = drv))
+
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_smooth(aes(color = drv),
+show.legend = FALSE)
+
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_point(aes(color = class)) +
+geom_smooth()
+
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_point() + geom_point( data =
+mpg \|\> filter(class == “2seater”), color = “red” ) + geom_point( data
+= mpg \|\> filter(class == “2seater”), shape = “circle open”, size = 3,
+color = “red” ) ggplot(mpg, aes(x = hwy)) + geom_histogram(binwidth = 2)
+
+ggplot(mpg, aes(x = hwy)) + geom_density()
+
+ggplot(mpg, aes(x = hwy)) + geom_boxplot()
+
+library(ggridges)
+
+ggplot(mpg, aes(x = hwy, y = drv, fill = drv, color = drv)) +
+geom_density_ridges(alpha = 0.5, show.legend = FALSE)
+
+# Exercises pt 2 of 6
+
+# Number 1
+
+\#geom_smooth, geom_boxplot, geom_histogram, geom_density
+
+# Number 2
+
+\#show.legend = FALSE, hides the legend in the plot
+
+# Number 3
+
+\#The se argument (true or false) either displays or hides the standard
+error ribbion around a smooth line in the geom_smooth function
+
+# Number 4
+
+ggplot(mpg, aes(y = hwy, x = displ)) + geom_point() + geom_smooth(color
+= “blue”, se = FALSE)
+
+# Facets
+
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_point() + facet_wrap(~cyl)
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_point() + facet_grid(drv ~
+cyl) ggplot(mpg, aes(x = displ, y = hwy)) + geom_point() +
+facet_grid(drv ~ cyl, scales = “free”)
+
+# Exercises pt 3 of 6
+
+# Number 1
+
+\#The continuous variable is converted to a categorical variable
+
+# Number 2
+
+ggplot(mpg) + geom_point(aes(x = drv, y = cyl)) \#there are no
+observations in the dataset that correspond to the specific
+combinations?
+
+# Number 3
+
+ggplot(mpg) + geom_point(aes(x = displ, y = hwy)) + facet_grid(drv ~ .)
+
+ggplot(mpg) + geom_point(aes(x = displ, y = hwy)) + facet_grid(. ~ cyl)
+\#The . causes the column dimension in the parenthases to be disregarded
+(ex. (. ~ cyl) ignores the row dimension while (drv ~ .) ignores the
+column dimension)
+
+# Question 4
+
+ggplot(mpg) + geom_point(aes(x = displ, y = hwy)) + facet_wrap(~ cyl,
+nrow = 2) \#Faceting Advantages: Reduces clutter, provides focused view,
+avoids color confusions and limited color categories \#Disadvantages:
+Harder to make direct comparisons and quick recognition
+
+# Question 5
+
+\#nrow / ncol = number of rows and columns
+
+# Question 6
+
+ggplot(mpg, aes(x = displ)) + geom_histogram() + facet_grid(drv ~ .)
+\#The(drv ~ .) arguement is better to compare displ ggplot(mpg, aes(x =
+displ)) + geom_histogram() + facet_grid(. ~ drv)
+
+# Quesiton 7
+
+ggplot(mpg) + geom_point(aes(x = displ, y = hwy)) + facet_grid(drv ~ .)
+
+# Statistical Transformations
+
+ggplot(diamonds, aes(x = cut)) + geom_bar() diamonds \|\> count(cut)
+\|\> ggplot(aes(x = cut, y = n)) + geom_bar(stat = “identity”)
+
+ggplot(diamonds, aes(x = cut, y = after_stat(prop), group = 1)) +
+geom_bar()
+
+ggplot(diamonds) + stat_summary( aes(x = cut, y = depth), fun.min = min,
+fun.max = max, fun = median )
+
+# Exercises pt 4 of 6
+
+# Question 1
+
+\#geom_pointrange() ggplot(diamonds) + geom_pointrange( mapping = aes(x
+= cut, y = depth), stat = “summary”, fun.min = min, fun.max = max, fun =
+median ) \# Question 2 \#geom_col() creates bar charts where the height
+of each bar directly represents values provided in your data
+
+# Question 3
+
+\#stat_smooth() computes the variables for each fitted value along the
+smoothed line (y, ymin, yma, se) \#arguments that control behavior
+(method, formula, se, level, span, n, fullrange)
+
+\#Question 4 \#If group one is not set, the plot treats each x value as
+its own group when creating proportions resulting in a hieght of 1. The
+proportion of each category is not relative to the total.
+
+# Position Adjustments
+
+ggplot(mpg, aes(x = drv, color = drv)) + geom_bar()
+
+ggplot(mpg, aes(x = drv, fill = drv)) + geom_bar()
+
+ggplot(mpg, aes(x = drv, fill = class)) + geom_bar()
+
+ggplot(mpg, aes(x = drv, fill = class)) + geom_bar(alpha = 1/5, position
+= “identity”)
+
+ggplot(mpg, aes(x = drv, color = class)) + geom_bar(fill = NA, position
+= “identity”)
+
+ggplot(mpg, aes(x = drv, fill = class)) + geom_bar(position = “fill”)
+
+ggplot(mpg, aes(x = drv, fill = class)) + geom_bar(position = “dodge”)
+
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_point(position = “jitter”)
+
+# Exercises pt 5 of 6
+
+# Question 1
+
+ggplot(mpg, aes(x = cty, y = hwy)) + geom_point(position = “jitter”) \#
+Question 2 \#The default position adjustment for geom_point() is
+“identity”, which means points are plotted exactly at their given x and
+y coordinates without any modification or adjustment. \# Question 3
+\#Width and hieght are parameters that can control the area of jitter \#
+Question 4 \#geom_jitter() spreads points with random noise while
+geom_count() sizes points by count at their given (x, y)
+
+# Coordinate Systems
+
+nz \<- map_data(“nz”)
+
+ggplot(nz, aes(x = long, y = lat, group = group)) + geom_polygon(fill =
+“white”, color = “black”)
+
+ggplot(nz, aes(x = long, y = lat, group = group)) + geom_polygon(fill =
+“white”, color = “black”) + coord_quickmap() bar \<- ggplot(data =
+diamonds) + geom_bar( mapping = aes(x = clarity, fill = clarity),
+show.legend = FALSE, width = 1 ) + theme(aspect.ratio = 1)
+
+bar + coord_flip() bar + coord_polar()
+
+# Exercises pt 6 of 6
+
+# Question 1
+
+library(ggplot2)
+
+ggplot(mpg, aes(x = factor(1), fill = drv)) + geom_bar(width = 1) +
+coord_polar(theta = “y”)
+
+# Question 3
+
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + geom_point() +
+geom_abline() + coord_fixed()
