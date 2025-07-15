@@ -1,0 +1,314 @@
+---
+title: "Chapter_16_Factors"
+format: gfm
+---
+#Factors are used for categorical variables, variables that have a fixed and known set of possible values, or when you want to display character vectors in a non-alphabetical order.
+
+```{r}
+library(tidyverse)
+```
+
+# Factor Basics
+```{r}
+x1 <- c("Dec", "Apr", "Jan", "Mar")
+```
+```{r}
+x2 <- c("Dec", "Apr", "Jam", "Mar")
+```
+
+```{r}
+sort(x1)
+```
+#To create a factor you must start by creating a list of the valid levels:
+```{r}
+month_levels <- c(
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+)
+```
+
+```{r}
+y1 <- factor(x1, levels = month_levels)
+y1
+
+sort(y1)
+```
+```{r}
+y2 <- factor(x2, levels = month_levels)
+y2
+```
+
+```{r}
+factor(x1)
+```
+```{r}
+fct(x1)
+```
+```{r}
+levels(y2)
+```
+```{r}
+csv <- "
+month,value
+Jan,12
+Feb,56
+Mar,12"
+
+df <- read_csv(csv, col_types = cols(month = col_factor(month_levels)))
+df$month
+```
+# General Social Survey
+```{r}
+gss_cat
+```
+
+```{r}
+gss_cat |>
+  count(race)
+```
+
+# Exercises pt 1 of 3
+# Question 1
+```{r}
+ggplot(gss_cat, mapping = aes(x = rincome)) +
+  geom_bar(width = 1 )
+```
+#Overlapping categories make this plot hard to read. 
+#Improved:
+```{r}
+gss_cat %>%
+  mutate(rincome = fct_collapse(rincome,
+    "No answer" = c("No answer", "Don't know", "Refused"),
+    "$0 to 4999" = c("Lt $1000", "$1000 to 2999", "$3000 to 3999", "$4000 to 4999"),
+    "$5000 to 9999" = c("$5000 to 5999", "$6000 to 6999", "$7000 to 7999", "$8000 to 9999")
+  )) %>%
+  ggplot(aes(x = rincome)) +
+  geom_bar() +
+  coord_flip() +
+  labs(x = "Reported Income", y = "Count")
+```
+
+# Question 2
+```{r}
+ggplot(gss_cat, aes(x = relig)) +
+  geom_bar() +
+  coord_flip() +
+  labs(y = "Count", x = "Religion")
+  
+```
+#Protestant is the most popular religion
+```{r}
+ggplot(gss_cat, aes(x = partyid)) +
+  geom_bar() +
+  coord_flip() +
+  labs(y = "Count", x = "Party Identity")
+```
+#Independent is the most common party identity
+#mQuestion 3
+```{r}
+library(dplyr)
+gss_cat %>%
+  count(denom, relig)
+
+```
+
+# Modifying Factor Order
+
+```{r}
+relig_summary <- gss_cat |>
+  group_by(relig) |>
+  summarize(
+    tvhours = mean(tvhours, na.rm = TRUE),
+    n = n()
+  )
+
+ggplot(relig_summary, aes(x = tvhours, y = relig)) +
+  geom_point()
+```
+#fct_reorder() takes three arguments:
+#“.f”, the factor whose levels you want to modify.
+#“.x”, a numeric vector that you want to use to reorder the levels.
+#Optionally, “.fun”, a function that’s used if there are multiple values of “.x” for each value of “.f”. The default value is median.
+
+```{r}
+ggplot(relig_summary, aes(x = tvhours, y = fct_reorder(relig, tvhours))) +
+  geom_point()
+```
+
+```{r}
+relig_summary |>
+  mutate(
+    relig = fct_reorder(relig, tvhours)
+  ) |>
+  ggplot(aes(x = tvhours, y = relig)) +
+  geom_point()
+```
+
+
+```{r}
+rincome_summary <- gss_cat |>
+  group_by(rincome) |>
+  summarize(
+    age = mean(age, na.rm = TRUE),
+    n = n()
+  )
+
+ggplot(rincome_summary, aes(x = age, y = fct_reorder(rincome, age))) +
+  geom_point()
+```
+```{r}
+ggplot(rincome_summary, aes(x = age, y = fct_relevel(rincome, "Not applicable"))) +
+  geom_point()
+```
+```{r}
+by_age <- gss_cat |>
+  filter(!is.na(age)) |>
+  count(age, marital) |>
+  group_by(age) |>
+  mutate(
+    prop = n / sum(n)
+  )
+
+ggplot(by_age, aes(x = age, y = prop, color = marital)) +
+  geom_line(linewidth = 1) +
+  scale_color_brewer(palette = "Set1")
+
+ggplot(by_age, aes(x = age, y = prop, color = fct_reorder2(marital, age, prop))) +
+  geom_line(linewidth = 1) +
+  scale_color_brewer(palette = "Set1") +
+  labs(color = "marital")
+```
+
+```{r}
+gss_cat |>
+  mutate(marital = marital |> fct_infreq() |> fct_rev()) |>
+  ggplot(aes(x = marital)) +
+  geom_bar()
+```
+# Exercises pt 2 of 3
+# Question 1
+```{r}
+ggplot(gss_cat, aes(x = tvhours)) +
+  geom_bar()
+```
+#Because there are high outliers in the tv hour data, the mean would likely not be a good summary as it would be skewed upward. 
+# Question 2 
+#marital = arbitrary, rae = arbitrary, rincome = principled, partyid = pricipled, relgi = arbitrary, denom = arbitrary
+
+# Question 3 
+#Labels start from the axis of the graph and go upwards. 
+
+# Modifying Factor Levels 
+```{r}
+gss_cat |> count(partyid)
+```
+
+```{r}
+gss_cat |>
+  mutate(
+    partyid = fct_recode(partyid,
+      "Republican, strong"    = "Strong republican",
+      "Republican, weak"      = "Not str republican",
+      "Independent, near rep" = "Ind,near rep",
+      "Independent, near dem" = "Ind,near dem",
+      "Democrat, weak"        = "Not str democrat",
+      "Democrat, strong"      = "Strong democrat"
+    )
+  ) |>
+  count(partyid)
+```
+
+```{r}
+gss_cat |>
+  mutate(
+    partyid = fct_recode(partyid,
+      "Republican, strong"    = "Strong republican",
+      "Republican, weak"      = "Not str republican",
+      "Independent, near rep" = "Ind,near rep",
+      "Independent, near dem" = "Ind,near dem",
+      "Democrat, weak"        = "Not str democrat",
+      "Democrat, strong"      = "Strong democrat",
+      "Other"                 = "No answer",
+      "Other"                 = "Don't know",
+      "Other"                 = "Other party"
+    )
+  )
+```
+
+```{r}
+gss_cat |>
+  mutate(
+    partyid = fct_collapse(partyid,
+      "other" = c("No answer", "Don't know", "Other party"),
+      "rep" = c("Strong republican", "Not str republican"),
+      "ind" = c("Ind,near rep", "Independent", "Ind,near dem"),
+      "dem" = c("Not str democrat", "Strong democrat")
+    )
+  ) |>
+  count(partyid)
+```
+
+```{r}
+gss_cat |>
+  mutate(relig = fct_lump_lowfreq(relig)) |>
+  count(relig)
+```
+
+```{r}
+gss_cat |>
+  mutate(relig = fct_lump_n(relig, n = 10)) |>
+  count(relig, sort = TRUE)
+```
+
+# Exercises pt 3 of 3
+# Question 1
+```{r}
+
+gss_cat %>%
+  mutate(
+    partyid = fct_collapse(
+      partyid,
+      Democrat = c("Strong democrat", "Not str democrat"),
+      Republican = c("Strong republican", "Not str republican"),
+      Independent = c("Ind,near rep", "Independent", "Ind,near dem"),
+      Other = c("No answer", "Don't know", "Other party")
+    )
+  ) %>%
+  count(year, partyid) %>%
+  group_by(year) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(aes(x = year, y = prop, color = partyid)) +
+  geom_line(size = 1.1) +
+  labs(
+    x = "Year",
+    y = "Proportion",
+    color = "Party ID"
+  )
+
+
+```
+#No noticable trend?
+
+# Question 2
+```{r}
+
+gss_cat %>%
+  mutate(
+    rincome = fct_collapse(
+      rincome,
+      Other = c("No answer", "Don't know", "Refused", "Not applicable"),
+      `15,000+` = c("$15000 - 19999", "$20000 - 24999", "25000 or more"),
+      `5,000 or less` = c("Lt $1000", "$1000 to 2999", "$3000 to 3999", "$4000 to 4999"),
+      `5,000 - 15,000` = c("$5000 to 5999", "$6000 to 6999", "$7000 to 7999", "$8000 to 9999", "$10000 - 14999")
+    )
+  )
+
+```
+# Question 3 
+#fct_lump_n() lumps ALL levels except for the n most frequent (or least frequent if n < 0)
+
+# Ordered Factors
+```{r}
+ordered(c("a", "b", "c"))
+```
+
