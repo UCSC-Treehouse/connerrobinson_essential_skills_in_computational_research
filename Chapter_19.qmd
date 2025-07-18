@@ -1,0 +1,374 @@
+---
+title: "Chapter_19, Joins"
+format: gfm
+---
+
+```{r}
+library(tidyverse)
+```
+```{r}
+library(nycflights13)
+```
+
+# Primary and Foreign Keys
+Primary Key: varaible or set of variables that distinctly identify each observation 
+Compound Key: when 1+ variable neded
+Foreign Key: a variable (or set of variables) that correspond to a primary key in another table 
+*Primary and foreign keys almost always have the same names
+
+# Checking Primary Keys
+
+```{r}
+planes |> 
+  count(tailnum) |> 
+  filter(n > 1)
+
+weather |> 
+  count(time_hour, origin) |> 
+  filter(n > 1)
+```
+
+```{r}
+planes |> 
+  filter(is.na(tailnum))
+
+weather |> 
+  filter(is.na(time_hour) | is.na(origin))
+```
+
+# Surrogate Keys
+Three variables that together uniquely identify each flight:
+```{r}
+flights |> 
+  count(time_hour, carrier, flight) |> 
+  filter(n > 1)
+```
+
+```{r}
+airports |>
+  count(alt, lat) |> 
+  filter(n > 1)
+```
+
+```{r}
+flights2 <- flights |> 
+  mutate(id = row_number(), .before = 1)
+flights2
+```
+
+# Exercises pt 1 of 3
+# Question 1
+If weather containeed weather records for all airports in the USA, additional connections would be made to flights and their destination airport weather conditions 
+
+# Question 2
+```{r}
+weather %>%
+  count(year, month, day, hour, origin) %>%
+  filter(n > 1)
+```
+The hour with duplicate observations was during daylights savings that year.
+# Question 3
+```{r}
+special_days <- flights %>%
+  filter(
+    (month == 12 & day %in% c(24, 25)) |   
+      (month == 11 & day == 28)            
+  ) %>%
+  count(year, month, day)
+print(special_days)
+```
+# Question 4
+```{r}
+library(Lahman)
+```
+```{r}
+Salaries %>%
+  count(playerID) %>%
+  arrange(desc(n))
+```
+
+```{r}
+Batting %>%
+  count(playerID) %>%
+  arrange(desc(n))
+```
+```{r}
+AwardsManagers %>%
+  count(playerID) %>%
+  arrange(desc(n))
+
+```
+
+```{r}
+Managers %>%
+  count(playerID) %>%
+  arrange(desc(n))
+```
+
+```{r}
+Fielding %>%
+  count(playerID) %>%
+  arrange(desc(n))
+```
+Not sure what the diagram 
+
+# Mutating Joins 
+
+```{r}
+flights2 <- flights |> 
+  select(year, time_hour, origin, dest, tailnum, carrier)
+flights2
+```
+
+```{r}
+flights2 |>
+  left_join(airlines)
+```
+
+```{r}
+flights2 |> 
+  left_join(weather |> select(origin, time_hour, temp, wind_speed))
+```
+
+```{r}
+flights2 |> 
+  left_join(planes |> select(tailnum, type, engines, seats))
+```
+
+```{r}
+flights2 |> 
+  filter(tailnum == "N3ALAA") |> 
+  left_join(planes |> select(tailnum, type, engines, seats))
+```
+
+# Specifying Join Keys
+ left_join(): the output will always have the same rows as x, the data frame you’re joining to
+```{r}
+flights2 |> 
+  left_join(planes)
+```
+
+```{r}
+flights2 |> 
+  left_join(planes, join_by(tailnum))
+```
+
+```{r}
+flights2 |> 
+  left_join(airports, join_by(dest == faa))
+
+flights2 |> 
+  left_join(airports, join_by(origin == faa))
+```
+
+# Filtering Joins
+Semi-joins: keep all rows in x that have a match in y
+```{r}
+airports |> 
+  semi_join(flights2, join_by(faa == origin))
+```
+
+Anti-joins: return all rows in x that do NOT have a match in y
+  distinct() can specify which variable you want to display
+```{r}
+flights2 |> 
+  anti_join(airports, join_by(dest == faa)) |> 
+  distinct(dest)
+```
+
+```{r}
+flights2 |>
+  anti_join(planes, join_by(tailnum)) |> 
+  distinct(tailnum)
+```
+
+# Exercises pt 2 of 3
+# Question 1 
+```{r}
+library(lubridate)
+
+worst_hours <- flights %>%
+  filter(!is.na(dep_delay)) %>%
+  group_by(year, month, day, hour, origin) %>%
+  summarise(
+    mean_dep_delay = mean(dep_delay, na.rm = TRUE),
+    n_flights = n(),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(mean_dep_delay)) %>%
+  slice_head(n = 48)
+
+worst_hours_weather <- worst_hours %>%
+  left_join(
+    weather,
+    by = c("year", "month", "day", "hour", "origin")
+  )
+
+worst_hours_weather %>%
+  select(
+    year, month, day, hour, origin, mean_dep_delay, n_flights,
+    temp, wind_speed, precip, visib, 
+    humid, wind_gust, matches("rain|snow|fog|hail|thunder")
+  ) %>%
+  arrange(desc(mean_dep_delay)) %>%
+  head(10)
+
+ggplot(worst_hours_weather, aes(x = precip, y = mean_dep_delay, color = origin)) +
+  geom_point(size = 3) +
+  labs(
+    title = "Mean Departure Delay vs. Precipitation for 48 Worst Hours",
+    x = "Precipitation (inches)",
+    y = "Mean Departure Delay (minutes)"
+  )
+
+```
+# Question 2
+```{r}
+top_dest <- flights2 |>
+  count(dest, sort = TRUE) |>
+  head(10)
+
+flights_to_top_dest <- flights2 |>
+  filter(dest %in% top_dest$dest)
+flights2 |>
+  semi_join(top_dest, by = "dest")
+
+```
+
+# Question 3
+flights_missing_weather <- flights %>%
+  left_join(weather, by = c("hour", "origin"))
+Not every flight has corresponding weather data for that hour.
+
+# Question 4
+
+flights %>%
+  anti_join(planes, by = "tailnum") %>%
+  count(carrier, sort = TRUE) %>%
+  mutate(p = n / sum(n))
+
+The majority of the flights are in MQ and AA carriers.
+
+# Question 5
+
+planes_plus_carriers <- planes %>%
+  left_join(plane_carrier_list, by = "tailnum") 
+multiple_carrier_planes <- planes_plus_carriers %>%
+  filter(n_carriers > 1)
+
+nrow(multiple_carrier_planes)   
+multiple_carrier_planes %>%
+  select(tailnum, carriers)
+  
+# Question 6
+```{r}
+
+flights_with_origin <- flights %>%
+  left_join(
+    airports %>% select(faa, origin_lat = lat, origin_lon = lon),
+    by = c("origin" = "faa")
+  )
+
+flights_with_geo <- flights_with_origin %>%
+  left_join(
+    airports %>% select(faa, dest_lat = lat, dest_lon = lon),
+    by = c("dest" = "faa")
+  )
+print(flights_with_geo)
+print(flights_with_origin)
+```
+
+# Question 7
+
+```{r}
+
+avg_delays <- flights |>
+  group_by(dest) |>
+  summarise(
+    avg_arr_delay = mean(arr_delay, na.rm = TRUE),
+    n = n()
+  )
+
+airport_delays <- airports |>
+  inner_join(avg_delays, by = c("faa" = "dest"))
+
+ggplot(airport_delays, aes(x = lon, y = lat)) +
+  borders("state") +
+  geom_point(aes(color = avg_arr_delay, size = n), alpha = 0.8) +
+  coord_quickmap()+
+     scale_color_viridis_c(option = "plasma", name = "Avg Arrival Delay (min)")
+
+```
+# Question 8
+```{r}
+jun13_delays <- flights |>
+  filter(year == 2013, month ==6, day == 13) |>
+   group_by(dest) |>
+  summarise(
+    avg_arr_delay = mean(arr_delay, na.rm = TRUE),
+    n = n()
+  )
+
+jun13_map <- jun13_delays |>
+  inner_join(airports, by = c("dest" = "faa")) 
+
+ggplot(jun13_map, aes(x = lon, y = lat)) +
+  borders("state") +
+  geom_point(aes(color = avg_arr_delay, size = avg_arr_delay), alpha = 0.7) +
+  coord_quickmap() +
+  scale_color_viridis_c(option = "plasma", name = "Avg Delay (min)")
+```
+
+# How Joins Work
+
+```{r}
+x <- tribble(
+  ~key, ~val_x,
+     1, "x1",
+     2, "x2",
+     3, "x3"
+)
+y <- tribble(
+  ~key, ~val_y,
+     1, "y1",
+     2, "y2",
+     4, "y3"
+)
+```
+
+Left joins keep all observations in x
+Right joins keep all observations in y
+Full Join keeps all observations that appear in x OR y (non matching go in NA)
+
+# Row Matching
+If an x observation matches more than 1 row in y, it’s duplicated once for each match.
+```{r}
+df1 <- tibble(key = c(1, 2, 2), val_x = c("x1", "x2", "x3"))
+df2 <- tibble(key = c(1, 2, 2), val_y = c("y1", "y2", "y3"))
+
+df1 |> 
+  inner_join(df2, join_by(key))
+```
+
+# Filtering Joins
+semi-join keeps rows in x that have one or more matches in y, as in the first figure
+anti-join keeps rows in x that match zero rows in y
+
+# Non-equi Joins
+```{r}
+x |> inner_join(y, join_by(key == key), keep = TRUE)
+```
+
+Inequality joins use <, <=, >, and >= instead of ==.
+
+# Cross Joins
+```{r}
+df <- tibble(name = c("John", "Simon", "Tracy", "Max"))
+df |> cross_join(df)
+```
+
+# Exercises pt 3 of 3
+# Question 1
+The default for joins is keep = FALSE, which uses keys in the output and ensures they always match. By adding keep = TRUE, the output with use distinct x and y keys which highlights their differences.
+# Question 2
+q is the end variable, using q < q allows us to see which intervals end earilier than others
