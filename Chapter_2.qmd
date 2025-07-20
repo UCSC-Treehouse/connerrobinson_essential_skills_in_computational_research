@@ -1,0 +1,70 @@
+---
+title: "Chpater_2, Workflow: basics"
+format: gfm
+editor: visual
+---
+
+# Coding Basics
+```{r}
+1 / 200 * 30
+(59 + 73 + 2) / 3
+sin(pi / 2)
+```
+```{r}
+x <- 3 * 4
+print(x)
+```
+You can combine multiple elements into a vector with c():
+
+```{r}
+primes <- c(2, 3, 5, 7, 11, 13)
+```
+
+```{r}
+primes * 2
+primes - 1
+```
+All R statements where you create objects, assignment statements, have the same form:
+
+object_name <- value
+
+Use _ for spaces, object names must start with a letter and can not use numbers
+# Comments
+Anything after # is ignored in a line, allows someone to document work and communicate to read
+
+# Calling Functions
+
+```{r}
+seq(from = 1, to = 10)
+```
+```{r}
+seq(1, 10)
+```
+
+# Exercises pt 1 of 1
+# Question 1
+You have to put "my_variable" in an argument that would display the object like print()
+
+# Question 2
+```{r}
+library(tidyverse)
+
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  geom_smooth(method = "lm")
+  
+```
+# Question 3
+The keyboard shortcut reference commands are displayed, you can find the same information the the "Tools" tab.
+
+# Question 4 
+```{r}
+my_bar_plot <- ggplot(mpg, aes(x = class)) +
+  geom_bar() 
+
+my_scatter_plot <- ggplot(mpg, aes(x = cty, y = hwy)) +
+  geom_point() 
+
+ggsave(filename = "mpg-plot.png", plot = my_bar_plot)
+```
+The first plot, because its associated with the object name "my_bar_plot"
