@@ -1,0 +1,251 @@
+---
+title: "Chapter 5, Data Tidying"
+format: gfm
+---
+
+```{r}
+ library(tidyverse)
+```
+
+# Tidy Data
+
+Three Rules That Make a Dataset Tidy
+1. Each variable is a column; each column is a variable.
+2. Each observation is a row; each row is an observation.
+3. Each value is a cell; each cell is a single value.
+
+```{r}
+# Compute rate per 10,000
+table1 |>
+  mutate(rate = cases / population * 10000)
+
+# Compute total cases per year
+table1 |> 
+  group_by(year) |> 
+  summarize(total_cases = sum(cases))
+
+# Visualize changes over time
+ggplot(table1, aes(x = year, y = cases)) +
+  geom_line(aes(group = country), color = "grey50") +
+  geom_point(aes(color = country, shape = country)) +
+  scale_x_continuous(breaks = c(1999, 2000)) # x-axis breaks at 1999 and 2000
+```
+
+# Exercises pt 1 of 1
+
+# Question 1
+The number of TB cases documented by the World Health Organization in Afghanistan, Brazil, and China between 1999 and 2000.
+# Question 2
+```{r}
+table2 |>
+ select(country, year, count)
+```
+
+```{r}
+# For table2 (long format: country, year, type, count)
+table2_cases <- table2 %>% filter(type == "cases")
+table2_pop <- table2 %>% filter(type == "population")
+merged <- left_join(table2_cases, table2_pop, by = c("country", "year"), suffix = c("_cases", "_pop"))
+merged <- merged %>% mutate(rate = (count_cases / count_pop) * 10000)
+
+print(table2_cases)
+print(table2_pop)
+```
+
+# Lengthening Data
+
+```{r}
+billboard
+```
+
+```{r}
+billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), 
+    names_to = "week", 
+    values_to = "rank"
+  )
+```
+
+```{r}
+billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), 
+    names_to = "week", 
+    values_to = "rank",
+    values_drop_na = TRUE
+  )
+```
+
+```{r}
+billboard_longer <- billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), 
+    names_to = "week", 
+    values_to = "rank",
+    values_drop_na = TRUE
+  ) |> 
+  mutate(
+    week = parse_number(week)
+  )
+billboard_longer
+```
+
+```{r}
+billboard_longer |> 
+  ggplot(aes(x = week, y = rank, group = track)) + 
+  geom_line(alpha = 0.25) + 
+  scale_y_reverse()
+```
+
+# How Does Pivoting Work?
+```{r}
+df <- tribble(
+  ~id,  ~bp1, ~bp2,
+   "A",  100,  120,
+   "B",  140,  115,
+   "C",  120,  125
+)
+```
+
+```{r}
+df |> 
+  pivot_longer(
+    cols = bp1:bp2,
+    names_to = "measurement",
+    values_to = "value"
+  )
+```
+
+# Variables In Column Names
+```{r}
+who2
+```
+
+```{r}
+who2 |> 
+  pivot_longer(
+    cols = !(country:year),
+    names_to = c("diagnosis", "gender", "age"), 
+    names_sep = "_",
+    values_to = "count"
+  )
+```
+
+
+# Data and Variable Names in the Column Headers
+
+```{r}
+household
+```
+```{r}
+household |> 
+  pivot_longer(
+    cols = !family, 
+    names_to = c(".value", "child"), 
+    names_sep = "_", 
+    values_drop_na = TRUE
+  )
+```
+
+# Widening Data
+pivot_wider() makes datasets wider by increasing columns and reducing rows and helps when one observation is spread across multiple rows
+ - we need to provide the existing columns that define the values (values_from) and the column name (names_from)
+```{r}
+cms_patient_experience
+```
+
+```{r}
+cms_patient_experience |> 
+  distinct(measure_cd, measure_title)
+```
+
+```{r}
+cms_patient_experience |> 
+  pivot_wider(
+    names_from = measure_cd,
+    values_from = prf_rate
+  )
+```
+```{r}
+cms_patient_experience |> 
+  pivot_wider(
+    names_from = measure_cd,
+    values_from = prf_rate
+  )
+```
+
+```{r}
+cms_patient_experience |> 
+  pivot_wider(
+    id_cols = starts_with("org"),
+    names_from = measure_cd,
+    values_from = prf_rate
+  )
+```
+
+# How Does pivot_wider() Work?
+```{r}
+df <- tribble(
+  ~id, ~measurement, ~value,
+  "A",        "bp1",    100,
+  "B",        "bp1",    140,
+  "B",        "bp2",    115, 
+  "A",        "bp2",    120,
+  "A",        "bp3",    105
+)
+```
+
+```{r}
+df |> 
+  pivot_wider(
+    names_from = measurement,
+    values_from = value
+  )
+```
+
+```{r}
+df |> 
+  distinct(measurement) |> 
+  pull()
+```
+
+```{r}
+df |> 
+  select(-measurement, -value) |> 
+  distinct()
+```
+
+```{r}
+df |> 
+  select(-measurement, -value) |> 
+  distinct() |> 
+  mutate(x = NA, y = NA, z = NA)
+```
+
+```{r}
+df <- tribble(
+  ~id, ~measurement, ~value,
+  "A",        "bp1",    100,
+  "A",        "bp1",    102,
+  "A",        "bp2",    120,
+  "B",        "bp1",    140, 
+  "B",        "bp2",    115
+)
+```
+
+```{r}
+df |>
+  pivot_wider(
+    names_from = measurement,
+    values_from = value
+  )
+```
+
+```{r}
+df |> 
+  group_by(id, measurement) |> 
+  summarize(n = n(), .groups = "drop") |> 
+  filter(n > 1)
+```
+
