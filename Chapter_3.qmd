@@ -1,0 +1,404 @@
+---
+title: "Chapter_3, Data Transformation"
+format: gfm
+editor: visual
+---
+```{r}
+library(dplyr)
+library(nycflights13)
+library(tidyverse)
+```
+
+glimpse(flights)
+
+Use glimpse() to inspect data in a package
+
+# dplyr Basics
+The first argument is always a data frame.
+The subsequent arguments typically describe which columns to operate on using the variable names (without quotes).
+The output is always a new data frame.
+A pipe can combine multiple verbs (|>) which stand as "then" when reading function
+
+```{r}
+flights |>
+  filter(dest == "IAH") |> 
+  group_by(year, month, day) |> 
+  summarize(
+    arr_delay = mean(arr_delay, na.rm = TRUE)
+  )
+```
+
+
+# Rows
+filter() changes which rows are present without changing their order, allows you to keep rows based on their values
+arrange() changes the order of the rows without changing which are present 
+distinct() finds rows with unique values
+
+```{r}
+flights |> 
+  filter(dep_delay > 120)
+```
+!= (not equal to)
+== (equal to)
+& or , to indicate “and”
+| to indicate “or” (check for either condition)
+```{r}
+# Flights that departed on January 1
+flights |> 
+  filter(month == 2 & day == 1)
+```
+
+```{r}
+# Flights that departed in January or February
+flights |> 
+  filter(month == 1 | month == 2)
+```
+
+```{r}
+# A shorter way to select flights that departed in January or February
+flights |> 
+  filter(month %in% c(1, 2))
+```
+
+```{r}
+jan1 <- flights |> 
+  filter(month == 1 & day == 1)
+```
+
+```{r}
+flights |> 
+  arrange(year, month, day, dep_time)
+```
+
+```{r}
+# Remove duplicate rows, if any
+flights |> 
+  distinct()
+```
+
+```{r}
+flights |>
+  count(origin, dest, sort = TRUE)
+```
+
+# Exercises pt 1 of 3
+# Question 1
+
+```{r}
+flights |>
+  filter(arr_time >= 120 ) 
+
+
+flights |>
+  filter(month %in% c(7, 8, 9))
+
+flights |>
+  filter(carrier %in% c("UA", "AA", "DL"))
+
+flights |>
+  filter(arr_delay > 120, dep_delay <= 0)
+
+flights |>
+  filter(dep_delay >= 60, dep_delay - arr_delay > 30)
+```
+
+# Question 2
+```{r}
+flights |> 
+  arrange(desc(dep_delay))
+```
+
+# Question 3
+```{r}
+flights |> 
+  mutate(speed = distance / (air_time / 60)) |> 
+  arrange(desc(speed))
+```
+
+# Question 4
+```{r}
+nrow(distinct(flights, year, month, day)) == 365
+```
+Yes there was a flight every day of 2013. 
+
+# Question 5
+```{r}
+flights |> 
+  arrange(desc(distance))
+```
+```{r}
+flights |> 
+  arrange((distance))
+```
+
+# Question 6
+The final result does not change regardless of the order you place the arguments filter() and arrange() but filtering first is normally preferred. 
+
+# Columns
+mutate() creates new columns that are derived from the existing columns
+  -By default, mutate() adds new columns on the right-hand side of your dataset
+  - .before argument to instead add the variables to the left-hand side
+  - use .after to add after a variable
+select() changes which columns are present
+rename() changes the names of the columns
+relocate() changes the positions of the columns
+
+```{r}
+flights |> 
+  mutate(
+    gain = dep_delay - arr_delay,
+    speed = distance / air_time * 60
+  )
+```
+
+```{r}
+flights |> 
+  mutate(
+    gain = dep_delay - arr_delay,
+    speed = distance / air_time * 60,
+    .before = 1
+  )
+```
+
+```{r}
+flights |> 
+  mutate(
+    gain = dep_delay - arr_delay,
+    speed = distance / air_time * 60,
+    .after = day
+  )
+```
+
+```{r}
+flights |> 
+  mutate(
+    gain = dep_delay - arr_delay,
+    hours = air_time / 60,
+    gain_per_hour = gain / hours,
+    .keep = "used"
+  )
+```
+
+```{r}
+flights |> 
+  select(year, month, day)
+```
+
+```{r}
+flights |> 
+  select(year:day)
+```
+
+```{r}
+flights |> 
+  select(!year:day)
+```
+
+```{r}
+flights |> 
+  select(where(is.character))
+```
+
+Functions for select()
+-starts_with(“abc”): matches names that begin with “abc”.
+
+-ends_with(“xyz”): matches names that end with “xyz”.
+
+-contains(“ijk”): matches names that contain “ijk”.
+
+-num_range(“x”, 1:3): matches x1, x2 and x3.
+
+```{r}
+flights |> 
+  rename(tail_num = tailnum)
+```
+
+```{r}
+flights |> 
+  relocate(time_hour, air_time)
+```
+
+```{r}
+flights |> 
+  relocate(year:dep_time, .after = time_hour)
+flights |> 
+  relocate(starts_with("arr"), .before = dep_time)
+```
+
+# Exercises pt 2 of 3
+# Question 1
+```{r}
+flights |> 
+  select(dep_time:dep_delay)
+```
+
+# Question 3
+```{r}
+flights |> 
+  select(dep_delay, dep_delay)
+```
+
+# Question 4
+any_of() selects columns present in your character vector
+
+```{r}
+q_four <- c("year", "month", "day", "dep_delay", "arr_delay")
+
+flights |>
+  select(any_of(q_four))
+```
+
+# Question 5
+```{r}
+flights |> select(contains("TIME"))
+```
+the select helps don't care about upper or lowercase?
+
+# Question 6
+```{r}
+flights |>
+  rename(air_time_min = air_time)
+```
+
+# Question 7 
+```{r}
+flights |> 
+  arrange(arr_delay) |> 
+  select(tailnum)
+
+
+```
+Arrange must come before select
+
+#  The Pipe
+Use group_by() to divide your dataset into groups meaningful for your analysis
+```{r}
+flights |> 
+  group_by(month)
+```
+
+summarize() reduces the data frame to have a single row for each group
+```{r}
+flights |> 
+  group_by(month) |> 
+  summarize(
+    avg_delay = mean(dep_delay)
+  )
+```
+```{r}
+flights |> 
+  group_by(month) |> 
+  summarize(
+    avg_delay = mean(dep_delay, na.rm = TRUE)
+  )
+```
+
+```{r}
+flights |> 
+  group_by(month) |> 
+  summarize(
+    avg_delay = mean(dep_delay, na.rm = TRUE), 
+    n = n()
+  )
+```
+
+There are five handy functions that allow you to extract specific rows within each group:
+
+-df |> slice_head(n = 1) takes the first row from each group.
+
+-df |> slice_tail(n = 1) takes the last row in each group.
+
+-df |> slice_min(x, n = 1) takes the row with the smallest value of column x.
+
+-df |> slice_max(x, n = 1) takes the row with the largest value of column x.
+
+-df |> slice_sample(n = 1) takes one random row.
+
+```{r}
+daily <- flights |>  
+  group_by(year, month, day)
+daily
+```
+
+```{r}
+daily |> 
+  ungroup()
+```
+
+```{r}
+flights |> 
+  summarize(
+    delay = mean(dep_delay, na.rm = TRUE), 
+    n = n(),
+    .by = month
+  )
+```
+
+```{r}
+flights |> 
+  summarize(
+    delay = mean(dep_delay, na.rm = TRUE), 
+    n = n(),
+    .by = c(origin, dest)
+  )
+```
+
+# Exercises pt 3 of 3
+
+# Question 1
+```{r}
+flights |> 
+  summarize(
+    delay = mean(dep_delay, na.rm = TRUE), 
+    n = n(),
+    .by = carrier
+  )
+  
+  
+```
+```{r}
+flights |> 
+  group_by(carrier, dest) |> 
+  summarize(n())
+```
+
+# Question 2
+```{r}
+flights |> 
+  summarize(
+    delay = mean(dep_delay, na.rm = TRUE), 
+    n = n(),
+    .by = dest
+  )
+```
+
+# Question 3
+```{r}
+by_hour <- flights %>%
+  mutate(hour = sched_dep_time %/% 100) %>%
+  group_by(hour) %>%
+  summarise(
+    avg_arr_delay = mean(arr_delay, na.rm = TRUE),
+    n = n()
+  )
+
+
+ggplot(by_hour, aes(x = hour, y = avg_arr_delay)) +
+  geom_line() +
+  geom_point() 
+```
+# Question 4
+It drops the n rows specified, keeping the rest
+
+# Question 5
+count() groups data by variables and summarizes the number of rows in each group by adding a count column
+sort orders the output by frequency, most-frequent groups first.
+
+# Question 6a
+a, b, a, a, b
+# Question 6b
+same as above
+# Question 6c
+Produces the mean number of times a and b are listed in y; pipeline allows the use of multiple verb arguments
+# Question 6d
+Produces the mean number of times each letter is used in their categories
