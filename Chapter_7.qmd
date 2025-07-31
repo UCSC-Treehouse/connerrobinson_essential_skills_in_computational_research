@@ -1,0 +1,226 @@
+---
+title: "Chapter 7, Data Import"
+format: gfm
+---
+
+```{r}
+library(tidyverse)
+```
+
+# Reading Data From A File
+CSV (comma-separated values) file:
+- First Row (header): gives column names
+- Six rows after header provide data 
+- Columns are separated by commas
+
+CSV files are read in R studio using read_csv()
+```{r}
+students <- read_csv("https://pos.it/r4ds-students-csv")
+```
+# Practical Advice
+```{r}
+students
+```
+To only recognizes empty strings (““) in this dataset as NAs:
+```{r}
+students <- read_csv("https://pos.it/r4ds-students-csv", na = c("N/A", ""))
+
+students
+```
+```{r}
+students |> 
+  rename(
+    student_id = `Student ID`,
+    full_name = `Full Name`
+  )
+```
+
+```{r}
+students |> 
+  mutate(mealpPlan = factor(mealPlan))
+```
+
+```{r}
+students <- students |>
+  mutate(
+    AGE = parse_number(if_else(AGE == "five", "5", AGE))
+  )
+
+students
+```
+
+# Other Arguments
+read_csv() can read text strings that you’ve created and formatted like a CSV file:
+
+```{r}
+read_csv(
+  "a,b,c
+  1,2,3
+  4,5,6"
+)
+```
+
+You can use skip = n to skip the first n lines or use comment = “#” to drop all lines that start with (e.g.) #:
+```{r}
+read_csv(
+  "The first line of metadata
+  The second line of metadata
+  x,y,z
+  1,2,3",
+  skip = 2
+)
+
+read_csv(
+  "# A comment I want to skip
+  x,y,z
+  1,2,3",
+  comment = "#"
+)
+```
+
+use col_names = FALSE to tell read_csv() not to treat the first row as headings and instead label them sequentially from X1 to Xn
+```{r}
+read_csv(
+  "1,2,3
+  4,5,6",
+  col_names = FALSE
+)
+```
+
+```{r}
+read_csv(
+  "1,2,3
+  4,5,6",
+  col_names = c("x", "y", "z")
+)
+```
+
+# Exercises pt 1 of 1
+# Question 1
+read_delim()
+# Question 2
+col_names, col_types, na, col_select, quoted_na, locale, progress, and more are all shared by read_csv() and read_tsv()
+# Question 3
+file, col_positions, col_names
+# Question 4 
+read_csv("x,y,'a,b'", quote = "'")
+# Question 5
+The files have too many fields, mismatched row lengths, have unmatched quotes, repeated headers, and incorrect delimiters, respectively. This will lead to error codes in the output. 
+# Question 6
+```{r}
+library(dplyr)
+library(ggplot2)
+
+annoying <- tibble(
+  `1` = 1:10,
+  `2` = `1` * 2 + rnorm(length(`1`))
+)
+
+# 1. Extract the variable called "1"
+# You can extract it as a vector like this:
+var_1 <- annoying$`1`
+print(var_1)
+
+# 2. Plot a scatterplot of "1" vs. "2"
+ggplot(annoying, aes(x = `1`, y = `2`)) +
+  geom_point() +
+  labs(x = "1", y = "2")
+
+# 3. Create a new column "3", which is 2 divided by 1
+annoying2 <- annoying %>%
+  mutate(`3` = `2` / `1`)
+
+print(annoying2)
+
+# 4. Rename the columns to "one", "two", and "three"
+annoying_renamed <- annoying2 %>%
+  rename(
+    one = `1`,
+    two = `2`,
+    three = `3`
+  )
+
+print(annoying_renamed)
+
+```
+# Missing Values, Column Types, and Problems
+```{r}
+simple_csv <- "
+  x
+  10
+  .
+  20
+  30"
+```
+
+```{r}
+read_csv(simple_csv)
+```
+
+```{r}
+read_csv(simple_csv)
+```
+
+```{r}
+df <- read_csv(
+  simple_csv, 
+  col_types = list(x = col_double())
+)
+```
+
+```{r}
+problems(df)
+```
+
+```{r}
+read_csv(simple_csv, na = ".")
+```
+
+# Column Types
+```{r}
+another_csv <- "
+x,y,z
+1,2,3"
+
+read_csv(
+  another_csv, 
+  col_types = cols(.default = col_character())
+)
+```
+
+```{r}
+read_csv(
+  another_csv,
+  col_types = cols_only(x = col_character())
+)
+```
+
+# Reading Data from Multiple Files
+```{r}
+sales_files <- c(
+  "https://pos.it/r4ds-01-sales",
+  "https://pos.it/r4ds-02-sales",
+  "https://pos.it/r4ds-03-sales"
+)
+read_csv(sales_files, id = "file")
+```
+
+```{r}
+sales_files <- list.files("data", pattern = "sales\\.csv$", full.names = TRUE)
+sales_files
+```
+
+# Writing a File
+```{r}
+write_csv(students, "students.csv")
+```
+
+```{r}
+students
+```
+
+```{r}
+write_rds(students, "students.rds")
+read_rds("students.rds")
+```
+
