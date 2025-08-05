@@ -1,0 +1,522 @@
+---
+title: "Chapter 13, Numbers"
+format: gfm
+---
+
+```{r}
+library(tidyverse)
+library(nycflights13)
+```
+
+# Making Numbers 
+
+Use parse_double() when you have numbers that have been written as strings:
+```{r}
+x <- c("1.2", "5.6", "1e3")
+parse_double(x)
+```
+parse_number() when the string contains non-numeric text that you want to ignore
+```{r}
+x <- c("$1,234", "USD 3,513", "59%")
+parse_number(x)
+```
+
+# Counts
+
+```{r}
+flights |> count(dest)
+```
+Use sort = TRUE to see the most common values
+```{r}
+flights |> count(dest, sort = TRUE)
+```
+
+```{r}
+flights |> 
+  group_by(dest) |> 
+  summarize(
+    n = n(),
+    delay = mean(arr_delay, na.rm = TRUE)
+  )
+```
+
+n_distinct(x) counts the number of distinct (unique) values of one or more variables:
+```{r}
+flights |> 
+  group_by(dest) |> 
+  summarize(carriers = n_distinct(carrier)) |> 
+  arrange(desc(carriers))
+```
+
+```{r}
+flights |> 
+  group_by(tailnum) |> 
+  summarize(miles = sum(distance))
+```
+
+```{r}
+flights |> count(tailnum, wt = distance)
+```
+
+# Exercises pt 1 of 4
+1. Use is.na() in the count argument 
+2. 
+```{r}
+flights %>%
+  group_by(dest) %>%
+  summarize(n = n(), .groups = "drop") %>%
+  arrange(desc(n))
+
+```
+```{r}
+flights %>%
+  group_by(tailnum) %>%
+  summarize(n = sum(distance, na.rm = TRUE), .groups = "drop")
+
+```
+
+# Arithmetic and Recycling Rules
+
+```{r}
+x <- c(1, 2, 10, 20)
+x / 5
+x / c(5, 5, 5, 5)
+```
+
+```{r}
+x * c(1, 2)
+x * c(1, 2, 3)
+```
+
+```{r}
+flights |> 
+  filter(month == c(1, 2))
+```
+
+# Minimum and Maximum
+pmin() and pmax(), which when given two or more variables will return the smallest or largest value in each row:
+```{r}
+df <- tribble(
+  ~x, ~y,
+  1,  3,
+  5,  2,
+  7, NA,
+)
+
+df |> 
+  mutate(
+    min = pmin(x, y, na.rm = TRUE),
+    max = pmax(x, y, na.rm = TRUE)
+  )
+```
+
+min() and max()  take multiple observations and return a single value
+
+```{r}
+df |> 
+  mutate(
+    min = min(x, y, na.rm = TRUE),
+    max = max(x, y, na.rm = TRUE)
+  )
+```
+
+# Modular Arithmetic
+%/% does integer division and %% computes the remainder:
+```{r}
+1:10 %/% 3
+1:10 %% 3
+```
+
+```{r}
+flights |> 
+  mutate(
+    hour = sched_dep_time %/% 100,
+    minute = sched_dep_time %% 100,
+    .keep = "used"
+  )
+```
+
+```{r}
+flights |> 
+  group_by(hour = sched_dep_time %/% 100) |> 
+  summarize(prop_cancelled = mean(is.na(dep_time)), n = n()) |> 
+  filter(hour > 1) |> 
+  ggplot(aes(x = hour, y = prop_cancelled)) +
+  geom_line(color = "grey50") + 
+  geom_point(aes(size = n))
+```
+
+# Rounding
+Use round(x) to round a number to the nearest integer:
+
+```{r}
+round(123.456)
+```
+You can control the precision of the rounding with the second argument, digits. round(x, digits) 
+
+```{r}
+round(123.456, 2)  # two digits
+round(123.456, 1)  # one digit
+round(123.456, -1) # round to nearest ten
+round(123.456, -2) # round to nearest hundred
+```
+```{r}
+round(c(1.5, 2.5))
+```
+
+```{r}
+x <- 123.456
+
+floor(x)
+ceiling(x)
+```
+
+```{r}
+# Round down to nearest two digits
+floor(x / 0.01) * 0.01
+# Round up to nearest two digits
+ceiling(x / 0.01) * 0.01
+```
+
+```{r}
+# Round to nearest multiple of 4
+round(x / 4) * 4
+
+# Round to nearest 0.25
+round(x / 0.25) * 0.25
+```
+
+# Cutting Numbers into Ranges
+Use cut() to break up (aka bin) a numeric vector into discrete buckets:
+
+```{r}
+x <- c(1, 2, 5, 10, 15, 20)
+cut(x, breaks = c(0, 5, 10, 15, 20))
+```
+```{r}
+cut(x, breaks = c(0, 5, 10, 100))
+```
+```{r}
+cut(x, 
+  breaks = c(0, 5, 10, 15, 20), 
+  labels = c("sm", "md", "lg", "xl")
+)
+```
+
+```{r}
+y <- c(NA, -10, 5, 10, 30)
+cut(y, breaks = c(0, 5, 10, 15, 20))
+```
+
+```{r}
+x <- 1:10
+cumsum(x)
+```
+
+# Exercises pt 2 of 4
+1. 
+flights |> : Starts with the flights dataset
+
+group_by(hour = sched_dep_time %/% 100) |> : Groups flights by scheduled departure hour and creates new variable "hour" which calculates scheduled departure hour divided by 100.
+
+summarize(prop_cancelled = mean(is.na(dep_time)), n = n()) |> : 
+
+New variable prop_cancelled calculates the proportion of cancelled flights and n counts the total number of flights in that hour
+
+filter(hour > 1) |> : removes flights scheduled at hour 0 or 1
+
+ggplot(aes(x = hour, y = prop_cancelled)) : creates a plot with the x-axis variable as hou and the y-axis as prop_cancelled
+
+geom_line(color = "grey50") :
+Adds a line showing how cancellation rates change over the day
+
+geom_point(aes(size = n)) :
+Adds points at each hour with the size of each point reflecting the number of flights in that hour
+
+2. 
+sin(), cos(), tan(), asin(), acos(), atan()
+They all use radians
+
+3. 
+```{r}
+flights %>%
+  mutate(
+    sched_dep_hour = sched_dep_time %/% 100,
+    sched_dep_min  = sched_dep_time %% 100,
+    sched_dep_time_frac = sched_dep_hour + sched_dep_min / 60
+  )
+```
+
+4. 
+```{r}
+flights %>%
+  mutate(
+    dep_time_rounded = round((dep_time %/% 100) * 60 + (dep_time %% 100) / 5) * 5,
+    arr_time_rounded = round((arr_time %/% 100) * 60 + (arr_time %% 100) / 5) * 5
+  )
+
+```
+
+# Ranks
+```{r}
+x <- c(1, 2, 2, 3, 4, NA)
+min_rank(x)
+```
+```{r}
+min_rank(desc(x))
+```
+```{r}
+df <- tibble(x = x)
+df |> 
+  mutate(
+    row_number = row_number(x),
+    dense_rank = dense_rank(x),
+    percent_rank = percent_rank(x),
+    cume_dist = cume_dist(x)
+  )
+```
+
+```{r}
+df <- tibble(id = 1:10)
+
+df |> 
+  mutate(
+    row0 = row_number() - 1,
+    three_groups = row0 %% 3,
+    three_in_each_group = row0 %/% 3
+  )
+```
+
+# Offsets
+```{r}
+x <- c(2, 5, 11, 11, 19, 35)
+lag(x)
+lead(x)
+```
+“x - lag(x)” gives you the difference between the current and previous value
+```{r}
+x - lag(x)
+```
+“x == lag(x)” tells you when the current value changes.
+```{r}
+x == lag(x)
+```
+
+# Consecutive Identifiers
+
+```{r}
+events <- tibble(
+  time = c(0, 1, 2, 3, 5, 10, 12, 15, 17, 19, 20, 27, 28, 30)
+)
+```
+
+```{r}
+events <- events |> 
+  mutate(
+    diff = time - lag(time, default = first(time)),
+    has_gap = diff >= 5
+  )
+events
+```
+
+```{r}
+events |> mutate(
+  group = cumsum(has_gap)
+)
+```
+
+```{r}
+df <- tibble(
+  x = c("a", "a", "a", "b", "c", "c", "d", "e", "a", "a", "b", "b"),
+  y = c(1, 2, 3, 2, 4, 1, 3, 9, 4, 8, 10, 199)
+)
+```
+
+```{r}
+df |> 
+  group_by(id = consecutive_id(x)) |> 
+  slice_head(n = 1)
+```
+
+# Exercises pt 3 of 4
+1. 
+```{r}
+flights %>%
+  mutate(rank = min_rank(desc(dep_delay))) %>%
+  filter(rank <= 10)
+
+```
+
+2.
+```{r}
+flights %>%
+  group_by(tailnum) %>%
+  summarise(
+    avg_arr_delay = mean(arr_delay, na.rm = TRUE),
+    n = n()
+  ) %>%
+  filter(n >= 20) %>%  # exclude planes with very few flights
+  arrange(desc(avg_arr_delay))
+```
+
+3. 
+```{r}
+flights %>%
+  mutate(
+    sched_dep_hour = sched_dep_time %/% 100,
+    sched_dep_min  = sched_dep_time %% 100,
+    sched_dep_time_frac = sched_dep_hour + sched_dep_min / 60
+  ) %>%
+  group_by(hour = floor(sched_dep_time_frac)) %>%
+  summarise(avg_dep_delay = mean(dep_delay, na.rm = TRUE)) %>%
+  ggplot(aes(x = hour, y = avg_dep_delay)) +
+  geom_line(color = "steelblue", size = 1.2) +
+  geom_point()
+```
+Early morning flights have the least amount of average delays. 
+
+4. 
+
+row_number() < 4: Selects the first 3 rows per destination group based on the dataset’s original order.
+row_number(dep_delay) < 4 :	Selects the 3 flights with the smallest departure delays per destination.
+
+5. 
+```{r}
+flights |> 
+  group_by(dest) |> 
+  mutate(
+    total_delay = sum(dep_delay, na.rm = TRUE),           
+    delay_prop  = dep_delay / total_delay                
+  )
+
+```
+
+6. 
+```{r}
+flights |> 
+  mutate(hour = dep_time %/% 100) |> 
+  group_by(year, month, day, hour) |> 
+  summarize(
+    dep_delay = mean(dep_delay, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  ) |> 
+  filter(n > 5) |> 
+  arrange(year, month, day, hour) |> 
+  mutate(
+    lag_delay = lag(dep_delay),
+    delay_diff = dep_delay - lag_delay
+  )
+
+```
+7. 
+```{r}
+flights |> 
+  filter(!is.na(air_time), !is.na(dest)) |> 
+  group_by(dest) |> 
+  mutate(
+    min_air_time = min(air_time, na.rm = TRUE),
+    rel_air_time = air_time / min_air_time
+  ) |> 
+  ungroup() |> 
+  arrange(desc(rel_air_time)) |> 
+  slice_head(n = 10)
+
+```
+
+8.
+```{r}
+multi_carrier_dests <- flights |> 
+  filter(!is.na(dest), !is.na(carrier)) |> 
+  distinct(dest, carrier) |> 
+  count(dest) |> 
+  filter(n >= 2) |> 
+  pull(dest)
+
+flights_multi <- flights |> 
+  filter(dest %in% multi_carrier_dests)
+
+flights_multi
+
+```
+
+# Center
+```{r}
+flights |>
+  group_by(year, month, day) |>
+  summarize(
+    mean = mean(dep_delay, na.rm = TRUE),
+    median = median(dep_delay, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  ) |> 
+  ggplot(aes(x = mean, y = median)) + 
+  geom_abline(slope = 1, intercept = 0, color = "white", linewidth = 2) +
+  geom_point()
+```
+
+# Minimum, Maximum, and Quantiles
+```{r}
+flights |>
+  group_by(year, month, day) |>
+  summarize(
+    max = max(dep_delay, na.rm = TRUE),
+    q95 = quantile(dep_delay, 0.95, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+# Spread
+ standard deviation: sd(x)
+ inter-quartile range: IQR()
+```{r}
+flights |> 
+  group_by(origin, dest) |> 
+  summarize(
+    distance_iqr = IQR(distance), 
+    n = n(),
+    .groups = "drop"
+  ) |> 
+  filter(distance_iqr > 0)
+```
+ 
+# Distributions
+```{r}
+flights |>
+  filter(dep_delay < 120) |> 
+  ggplot(aes(x = dep_delay, group = interaction(day, month))) + 
+  geom_freqpoly(binwidth = 5, alpha = 1/5)
+```
+
+# Positions
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  summarize(
+    first_dep = first(dep_time, na_rm = TRUE), 
+    fifth_dep = nth(dep_time, 5, na_rm = TRUE),
+    last_dep = last(dep_time, na_rm = TRUE)
+  )
+```
+
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  mutate(r = min_rank(sched_dep_time)) |> 
+  filter(r %in% c(1, max(r)))
+```
+
+# Exercises pt 4 of 4
+1. 
+Mean Delay (used when delays are symmetrically distributed or when you want a simple overall metric), Median Delay (used for skewed distributions or when you want a robust central tendency), Percentiles, Proportion of Delayed Flights, Standard Deviation, IQR
+Use departure delay to understand airport-side issues and arrival delay for passenger impact
+plane-level data (via tail numbers) allows you to track delays across flights
+
+2. 
+```{r}
+flights %>%
+  group_by(dest) %>%
+  summarize(sd_air_speed = sd(air_time / distance * 60, na.rm = TRUE)) %>%
+  arrange(desc(sd_air_speed))
+```
+
