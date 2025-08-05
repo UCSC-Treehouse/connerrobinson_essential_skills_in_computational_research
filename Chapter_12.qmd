@@ -1,0 +1,375 @@
+---
+title: "Chapter 12, Logical Vectors"
+format: gfm
+---
+```{r}
+library(tidyverse)
+library(nycflights13)
+
+x <- c(1, 2, 3, 5, 7, 11, 13)
+x * 2
+```
+
+```{r}
+df <- tibble(x)
+df |> 
+  mutate(y = x * 2)
+```
+
+# Comparisons
+```{r}
+flights |> 
+  filter(dep_time > 600 & dep_time < 2000 & abs(arr_delay) < 20)
+```
+
+```{r}
+flights |> 
+  mutate(
+    daytime = dep_time > 600 & dep_time < 2000,
+    approx_ontime = abs(arr_delay) < 20,
+    .keep = "used"
+  )
+```
+
+```{r}
+flights |> 
+  mutate(
+    daytime = dep_time > 600 & dep_time < 2000,
+    approx_ontime = abs(arr_delay) < 20,
+  ) |> 
+  filter(daytime & approx_ontime)
+```
+
+# Flotating Point Comparison 
+```{r}
+x <- c(1 / 49 * 49, sqrt(2) ^ 2)
+x
+```
+
+```{r}
+x == c(1, 2)
+```
+```{r}
+print(x, digits = 16)
+```
+
+```{r}
+near(x, c(1, 2))
+```
+near() which ignores small differences
+
+# Missing Values
+```{r}
+NA > 5
+
+10 == NA
+NA == NA
+```
+
+```{r}
+# We don't know how old Mary is
+age_mary <- NA
+
+# We don't know how old John is
+age_john <- NA
+
+# Are Mary and John the same age?
+age_mary == age_john
+```
+
+# is.na()
+is.na(x) returns TRUE for missing values and FALSE for everything else:
+
+```{r}
+is.na(c(TRUE, NA, FALSE))
+is.na(c(1, NA, 3))
+is.na(c("a", NA, "b"))
+```
+
+To find missing dep_time:
+```{r}
+flights |> 
+  filter(is.na(dep_time))
+```
+
+```{r}
+flights |> 
+  filter(month == 1, day == 1) |> 
+  arrange(dep_time)
+```
+
+# Exercises pt 1 of 4
+Near() comapres if two vectors of floating point numbers are equal 
+
+```{r}
+z <- sqrt(2)^2
+near(z, 2)
+```
+
+```{r}
+df <- tibble(x = c(TRUE, FALSE, NA))
+
+df |> 
+  mutate(
+    and = x & NA,
+    or = x | NA
+  )
+```
+
+# Order of Operations
+
+```{r}
+flights |> 
+   filter(month == 11 | month == 12)
+```
+
+```{r}
+flights |> 
+   filter(month == 11 | 12)
+```
+
+```{r}
+flights |> 
+  mutate(
+    nov = month == 11,
+    final = nov | 12,
+    .keep = "used"
+  )
+```
+
+# %in%
+x %in% y returns a logical vector the same length as x that is TRUE whenever a value in x is anywhere in y 
+Match values from a set	
+```{r}
+1:12 %in% c(1, 5, 11)
+letters[1:10] %in% c("a", "e", "i", "o", "u")
+```
+ 
+```{r}
+flights |> 
+  filter(month %in% c(11, 12))
+```
+ 
+```{r}
+c(1, 2, NA) == NA
+c(1, 2, NA) %in% NA
+```
+```{r}
+flights |> 
+  filter(dep_time %in% c(NA, 0800))
+```
+ 
+# Exercises pt 2 of 4
+1. 
+```{r}
+flights |> 
+  filter(is.na(arr_delay) & !is.na(dep_delay))
+```
+
+```{r}
+flights |> 
+  filter(!is.na(arr_time) & !is.na(sched_arr_time) & is.na(arr_delay))
+```
+
+2.
+```{r}
+flights |> 
+  filter(is.na(dep_time))
+```
+The arr_time, dep_delay, and arr_delay are all missing likely meaning these are cancelled flights
+
+3. 
+```{r}
+daily <- flights %>%
+  mutate(cancelled = is.na(dep_time)) %>%
+  group_by(month, day) %>%
+  summarise(
+    prop_cancelled = mean(cancelled),
+    avg_delay = mean(dep_delay, na.rm = TRUE)
+  )
+
+# Plot
+ggplot(daily, aes(x = prop_cancelled, y = avg_delay)) +
+  geom_point(alpha = 0.6)
+```
+There is a positive correlation between cancellations and delays with a few outliers
+
+# Logical Summaries 
+
+any(x) is the equivalent of |; it’ll return TRUE if there are any TRUE’s in x.
+all(x) is equivalent of &; it’ll return TRUE only if all values of x are TRUE’s.
+you can make the missing values go away with na.rm = TRUE.
+
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  summarize(
+    all_delayed = all(dep_delay <= 60, na.rm = TRUE),
+    any_long_delay = any(arr_delay >= 300, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+# Numeric Summaries of Logical Vectors
+In a logical vector in a numeric context, TRUE becomes 1 and FALSE becomes 0
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  summarize(
+    proportion_delayed = mean(dep_delay <= 60, na.rm = TRUE),
+    count_long_delay = sum(arr_delay >= 300, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+# Logical Subsetting
+```{r}
+flights |> 
+  filter(arr_delay > 0) |> 
+  group_by(year, month, day) |> 
+  summarize(
+    behind = mean(arr_delay),
+    n = n(),
+    .groups = "drop"
+  )
+```
+
+```{r}
+flights |> 
+  group_by(year, month, day) |> 
+  summarize(
+    behind = mean(arr_delay[arr_delay > 0], na.rm = TRUE),
+    ahead = mean(arr_delay[arr_delay < 0], na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  )
+```
+
+# Exercises pt 3 of 4
+1. 
+sum(is.na(x)) counts the amount of values in x that are missing NA
+mean(is.na(x)) calculates the proportion of missing values in x
+
+2. 
+prod() returns either 1 if TRUE or 0 if False and is equalivalent to all() for logical vectors
+min()returns the smallest value as well as 1 (true) or 0 (false); it is also equivalent to all()
+
+# if_else
+If you want to use one value when a condition is TRUE and another value when it’s FALSE
+“+ve” (positive) or “-ve” (negative)
+```{r}
+x <- c(-3:3, NA)
+if_else(x > 0, "+ve", "-ve")
+```
+```{r}
+if_else(x > 0, "+ve", "-ve", "???")
+```
+
+```{r}
+if_else(x < 0, -x, x)
+```
+```{r}
+x1 <- c(NA, 1, 2, NA)
+y1 <- c(3, NA, 4, 6)
+if_else(is.na(x1), y1, x1)
+```
+```{r}
+if_else(x == 0, "0", if_else(x < 0, "-ve", "+ve"), "???")
+```
+
+# case_when()
+takes pairs that look like condition ~ output. condition must be a logical vector; when it’s TRUE, output will be used
+```{r}
+x <- c(-3:3, NA)
+case_when(
+  x == 0   ~ "0",
+  x < 0    ~ "-ve", 
+  x > 0    ~ "+ve",
+  is.na(x) ~ "???"
+)
+```
+
+```{r}
+case_when(
+  x < 0 ~ "-ve",
+  x > 0 ~ "+ve"
+)
+```
+
+```{r}
+case_when(
+  x < 0 ~ "-ve",
+  x > 0 ~ "+ve",
+  .default = "???"
+)
+```
+
+```{r}
+case_when(
+  x > 0 ~ "+ve",
+  x > 2 ~ "big"
+)
+```
+
+```{r}
+flights |> 
+  mutate(
+    status = case_when(
+      is.na(arr_delay)      ~ "cancelled",
+      arr_delay < -30       ~ "very early",
+      arr_delay < -15       ~ "early",
+      abs(arr_delay) <= 15  ~ "on time",
+      arr_delay < 60        ~ "late",
+      arr_delay < Inf       ~ "very late",
+    ),
+    .keep = "used"
+  )
+```
+
+# Exercises pt 4 of 4
+1.
+```{r}
+tibble(x = 0:20) %>%
+  mutate(type = if_else(x %% 2 == 0, "even", "odd"))
+```
+2.
+```{r}
+x <- c("Monday", "Saturday", "Wednesday")
+
+if_else(x %in% c("Saturday", "Sunday"), "weekend", "weekday")
+
+```
+3. 
+```{r}
+x <- c(-3, 0, 5, -7)
+
+abs_x <- if_else(x < 0, -x, x)
+
+```
+4. 
+```{r}
+flights <- flights %>%
+  mutate(
+    is_holiday = case_when(
+      month == 1  & day == 1  ~ TRUE,   # New Year's Day
+      month == 7  & day == 4  ~ TRUE,   # Independence Day
+      month == 11 & day == 28 ~ TRUE,   # Thanksgiving (example date)
+      month == 12 & day == 25 ~ TRUE,   # Christmas
+      TRUE ~ FALSE
+    )
+  )
+```
+
+```{r}
+flights <- flights %>%
+  mutate(
+    holiday_name = case_when(
+      month == 1  & day == 1  ~ "New Year's Day",
+      month == 7  & day == 4  ~ "Independence Day",
+      month == 11 & day == 28 ~ "Thanksgiving",   # Note: Thanksgiving varies!
+      month == 12 & day == 25 ~ "Christmas",
+      TRUE ~ NA_character_
+    )
+  )
+```
+
